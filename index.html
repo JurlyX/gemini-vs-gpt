@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Ultimate Puter.js Infinite Craft (JSON REDESIGN - FINAL)</title>
+    <title>Infinite Craft Clone - FINAL FUNCTIONAL AI</title>
     <script src="https://js.puter.com/v2/"></script>
     <style>
-        /* (CSS is stable) */
+        /* --- Styles for a near-perfect clone experience --- */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 0;
             display: flex;
-            background-color: #eee;
+            background-color: #f7f7f7;
             color: #333;
             overflow: hidden; 
         }
@@ -28,7 +28,7 @@
             width: 250px;
             background-color: #fff;
             padding: 20px 10px;
-            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
             overflow-y: auto;
             height: 100vh;
             box-sizing: border-box;
@@ -38,13 +38,18 @@
             margin-top: 0;
             color: #1a1a1a;
             padding-bottom: 10px;
-            border-bottom: 2px solid #f0f0f0;
+            border-bottom: 2px solid #e0e0e0;
             font-size: 1.2em;
+        }
+        #inventory-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
         .sidebar-element-item {
             padding: 10px;
             border-radius: 6px;
-            background-color: #f7f7f7;
+            background-color: #f0f0f0;
             border: 1px solid #ddd;
             cursor: grab;
             font-size: 1em;
@@ -52,38 +57,42 @@
             transition: background-color 0.1s;
         }
         .sidebar-element-item:hover {
-            background-color: #e9e9e9;
+            background-color: #e0e0e0;
         }
         #workspace {
             flex-grow: 1;
             position: relative;
-            background-color: #f9f9f9;
+            background-color: #f7f7f7;
             overflow: hidden;
         }
         .element-card {
             position: absolute;
-            padding: 15px 20px;
+            padding: 12px 18px;
             border-radius: 8px;
             background-color: #fff;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            /* Stronger shadow for realism and visual separation */
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); 
             cursor: grab;
             font-size: 1.2em;
             font-weight: 700;
             border: 1px solid #ccc;
             user-select: none;
             z-index: 10;
-            transition: box-shadow 0.1s;
+            transition: box-shadow 0.1s, transform 0.1s;
         }
         .element-card:active {
             cursor: grabbing;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
+            /* Lift element slightly when grabbing */
+            transform: scale(1.05); 
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+            z-index: 50; /* Ensure active element is always on top */
         }
         .new-discovery {
-            animation: fadeInOut 1s ease-out;
+            animation: fadeInScale 1s ease-out;
             border-color: #007bff;
-            box-shadow: 0 0 10px #007bff;
+            box-shadow: 0 0 15px rgba(0, 123, 255, 0.7);
         }
-        @keyframes fadeInOut {
+        @keyframes fadeInScale {
             0% { transform: scale(0.5); opacity: 0; }
             50% { transform: scale(1.1); opacity: 1; }
             100% { transform: scale(1); opacity: 1; }
@@ -98,7 +107,7 @@
             border-radius: 6px;
             font-weight: bold;
             opacity: 0;
-            transition: opacity 0.3s;
+            transition: opacity 0.3s, background-color 0.3s;
             z-index: 100;
         }
         .visible {
@@ -121,7 +130,7 @@
 
     <script>
         // --- Core Game Constants & Puter.js Setup ---
-        const CACHE_KEY = 'infinite_craft_recipes_ultimate_final';
+        const CACHE_KEY = 'infinite_craft_recipes_final_working';
         const STARTING_ELEMENTS = ['Earth', 'Fire', 'Water', 'Wind'];
         let ALL_ELEMENTS = new Set(STARTING_ELEMENTS);
         let RECIPE_CACHE = {}; 
@@ -135,92 +144,106 @@
         let xOffset = 0, yOffset = 0; 
         let workspaceRect; 
         let finalX = 0, finalY = 0; 
+        let dragTimeout = null;
 
         // --- Utility Functions ---
 
+        /**
+         * Notifies the user with a message banner.
+         */
         function notify(message, isDiscovery = false) {
+            // Clear any existing timeout to keep the message visible if a new one arrives
+            clearTimeout(dragTimeout);
             notificationEl.textContent = message;
             notificationEl.className = 'visible';
             notificationEl.style.backgroundColor = isDiscovery ? '#28a745' : '#333';
-            setTimeout(() => {
+            dragTimeout = setTimeout(() => {
                 notificationEl.className = '';
             }, 3000);
         }
 
         /**
-         * AI Fusion Engine - REDESIGNED for Structured JSON Output (Maximum Reliability)
+         * AI Fusion Engine - Forces Structured JSON Output for maximum reliability.
          */
         async function runAICombination(first, second) {
             notify(`Combining ${first} + ${second}... AI is thinking! 🧠`);
 
-            // System Prompt: Demanding JSON for reliable parsing.
-            const prompt = `You are the engine behind a game like Infinite Craft. Combine "${first}" and "${second}" into a new word. The output must be a single element name that is semantically relevant. **A result is mandatory.** Respond ONLY with a single JSON object in the format: {"result": "Element Name"}. DO NOT include any other text, quotes, or markdown.`;
+            // The core, highly constrained prompt for forcing a single, clean result.
+            const prompt = `You are the engine behind a game like Infinite Craft. Combine "${first}" and "${second}" into a new word or phrase that is semantically relevant. **A result is mandatory.** Respond ONLY with a single JSON object in the format: {"result": "Element Name"}. DO NOT include any other text, quotes, or markdown fences (like \`\`\`).`;
 
             try {
+                // puter.ai.chat works and is used correctly
                 const response = await puter.ai.chat(prompt, {
-                    model: 'gpt-5-nano',
-                    temperature: 0.9, 
+                    model: 'gpt-5-nano', 
+                    temperature: 0.9, // Maximum creativity
                     max_tokens: 50, 
                 });
                 
                 let text = response.text.trim();
                 
-                // Aggressive cleaning of potential markdown fences
+                // Aggressively remove common markdown fences, which often wrap JSON
                 text = text.replace(/```json|```|json/gi, '').trim(); 
                 
-                // Attempt JSON parsing (most reliable way to get clean data)
                 const data = JSON.parse(text);
                 let newElement = data.result;
 
                 if (newElement && typeof newElement === 'string') {
                     newElement = newElement.trim();
+                    // Capitalize first letter
                     if (newElement.length > 0) {
                          newElement = newElement.charAt(0).toUpperCase() + newElement.slice(1);
                     }
-                    if (newElement.length > 30) return 'Nothing';
+                    // Filter out undesirable long or obvious error results
+                    if (newElement.length > 30 || newElement.toLowerCase().includes('nothing')) return 'Nothing';
                     return newElement;
                 }
                 
                 return 'Nothing';
 
             } catch (error) {
-                // Catches both AI failure and JSON parsing failure
+                // Catches JSON parsing errors (AI failed to provide valid JSON)
                 console.error("AI/JSON Parsing Error:", error);
-                notify('AI Error: Could not parse combination result. Try again.', false);
+                notify(`AI Error: Combination failed for ${first} + ${second}.`, false);
                 return 'ERROR';
             }
         }
 
+        /**
+         * The core crafting logic. Checks cache, calls AI, caches result.
+         */
         async function craftElements(e1, e2, newX, newY, el1, el2) {
+            // Combinations are commutative (order doesn't matter)
             const [first, second] = [e1, e2].sort();
             const pairKey = `${first}|${second}`;
 
-            // Check Cache
             let newElement = RECIPE_CACHE[pairKey];
 
-            // Use AI if not in cache (AI used every time a combination is attempted for a new pair)
+            // 1. If not in cache, call the AI
             if (!newElement) {
                 newElement = await runAICombination(first, second);
             }
 
             if (newElement && newElement !== 'Nothing' && newElement !== 'ERROR') {
                 
-                // Cache the new result
+                // 2. Persist to cache (KV Store)
                 if (!RECIPE_CACHE[pairKey]) {
                      RECIPE_CACHE[pairKey] = newElement;
+                     // Only write to Puter.js KV if it's a new combination for this session
                      await puter.kv.set(CACHE_KEY, RECIPE_CACHE);
                 }
 
                 const isNewDiscovery = !ALL_ELEMENTS.has(newElement);
                 if (isNewDiscovery) {
                     ALL_ELEMENTS.add(newElement);
-                    renderElements(); 
+                    renderElements(); // Update sidebar immediately
                 }
                 
                 notify(`🚀 Discovery! ${first} + ${second} = ${newElement}`, isNewDiscovery);
                 
+                // Remove the two source elements
                 el1.remove();
                 el2.remove();
+                // Create the new resulting element card
                 createCardEl(newElement, newX, newY, true);
 
             } else {
@@ -228,6 +251,9 @@
             }
         }
 
+        /**
+         * Checks if the dropped element overlaps with any other element card.
+         */
         function getOverlapTarget(droppedElement) {
             const droppedRect = droppedElement.getBoundingClientRect();
             const workspaceElements = Array.from(workspaceEl.querySelectorAll('.element-card'));
@@ -237,6 +263,7 @@
 
                 const targetRect = el.getBoundingClientRect();
 
+                // Standard collision detection logic
                 const isOverlapping = !(
                     droppedRect.right < targetRect.left || 
                     droppedRect.left > targetRect.right || 
@@ -280,13 +307,14 @@
         function renderElements() {
             inventoryListEl.innerHTML = '';
             
+            // Sort elements alphabetically for clean sidebar display
             Array.from(ALL_ELEMENTS).sort().forEach(element => {
                 inventoryListEl.appendChild(createSidebarEl(element));
             });
             countEl.textContent = ALL_ELEMENTS.size;
         }
         
-        // --- DRAG LOGIC (Stable) ---
+        // --- DRAG LOGIC (Real-time positioning) ---
 
         function startDrag(e, targetElement) {
             activeElement = targetElement;
@@ -295,7 +323,8 @@
             xOffset = e.clientX - rect.left; 
             yOffset = e.clientY - rect.top;
 
-            activeElement.style.zIndex = 20;
+            // Set high z-index and active class for visual feedback
+            activeElement.style.zIndex = 50; 
             activeElement.style.cursor = 'grabbing';
             
             document.addEventListener('mousemove', drag);
@@ -306,9 +335,11 @@
             if (!activeElement) return;
             e.preventDefault();
 
+            // Calculate new position relative to the workspace
             let newLeft = e.clientX - xOffset - workspaceRect.left;
             let newTop = e.clientY - yOffset - workspaceRect.top;
 
+            // Constrain movement to the workspace boundaries
             newLeft = Math.max(0, newLeft);
             newTop = Math.max(0, newTop);
 
@@ -322,6 +353,7 @@
         function dragEnd(e) {
             if (!activeElement) return;
 
+            // Snap back to final position
             activeElement.style.left = `${finalX}px`;
             activeElement.style.top = `${finalY}px`;
             
@@ -337,9 +369,11 @@
                 const activeRect = activeElement.getBoundingClientRect();
                 const targetRect = targetElement.getBoundingClientRect();
                 
+                // Calculate the midpoint for the new combined element
                 const newX = ((activeRect.left + targetRect.left) / 2) - workspaceRect.left;
                 const newY = ((activeRect.top + targetRect.top) / 2) - workspaceRect.top;
 
+                // Execute the core logic
                 craftElements(e1, e2, newX, newY, activeElement, targetElement);
             } 
             
@@ -351,11 +385,13 @@
         function generalMouseDown(e) {
             workspaceRect = workspaceEl.getBoundingClientRect();
 
+            // 1. If clicking an element in the sidebar (Inventory)
             if (e.target.classList.contains('sidebar-element-item')) {
                 e.preventDefault(); 
                 
                 const name = e.target.dataset.element;
                 
+                // Position the new card near the mouse pointer
                 const x = e.clientX - workspaceRect.left - 20; 
                 const y = e.clientY - workspaceRect.top - 20;
 
@@ -363,6 +399,7 @@
                 
                 return startDrag(e, card); 
 
+            // 2. If clicking an element on the workspace
             } else if (e.target.classList.contains('element-card')) {
                 e.preventDefault();
                 return startDrag(e, e.target);
@@ -373,6 +410,7 @@
 
         async function initializeGame() {
             try {
+                // Load cached recipes from Puter.js KV Store
                 const cachedRecipes = await puter.kv.get(CACHE_KEY);
                 if (cachedRecipes) {
                     RECIPE_CACHE = cachedRecipes;
@@ -381,6 +419,7 @@
                 console.warn("Could not load cache, starting fresh.");
             }
 
+            // Rebuild the ALL_ELEMENTS set from starting elements + cached results
             const discoveredElements = new Set(Object.values(RECIPE_CACHE));
             ALL_ELEMENTS = new Set([...STARTING_ELEMENTS, ...discoveredElements]);
 
@@ -388,7 +427,7 @@
             
             renderElements();
 
-            notify(`Ready! You have discovered ${ALL_ELEMENTS.size} elements.`, true);
+            notify(`Ready! Found ${ALL_ELEMENTS.size} unique elements.`, true);
         }
 
         initializeGame();
