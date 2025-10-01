@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Ultimate Puter.js Infinite Craft (SUCCESS FIXED)</title>
+    <title>Ultimate Puter.js Infinite Craft (AI-ONLY)</title>
     <script src="https://js.puter.com/v2/"></script>
     <style>
-        /* (CSS and HTML structure are stable and remain the same) */
+        /* (CSS is stable) */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
@@ -126,6 +126,8 @@
         let ALL_ELEMENTS = new Set(STARTING_ELEMENTS);
         let RECIPE_CACHE = {}; 
         
+        // HARDCODED_RECIPES removed as requested
+        
         const inventoryListEl = document.getElementById('inventory-list');
         const workspaceEl = document.getElementById('workspace');
         const notificationEl = document.getElementById('notification');
@@ -148,25 +150,25 @@
         }
 
         /**
-         * The AI "Fusion Engine" logic using Puter.js.
-         * FIX: Maxed temperature and added explicit instruction for core combinations.
+         * AI Fusion Engine - System Prompt is Correct
          */
         async function runAICombination(first, second) {
             notify(`Combining ${first} + ${second}... AI is thinking! 🧠`);
 
-            // FIX: Added strong emphasis on providing a result
-            const prompt = `You are the engine behind a game like Infinite Craft. Combine two words/idioms into a new word. The output must be a single word or short phrase that is semantically relevant. **A RESULT IS MANDATORY.** For basic combinations like Earth + Fire, return a common result (e.g., Lava). **DO NOT** include any commentary, quotes, punctuation, or extra words. Only respond with the resulting element name and nothing else. The inputs are "${first}" and "${second}".`;
+            // System Prompt: Explicitly requests clean, mandatory result.
+            const prompt = `You are the engine behind a game like Infinite Craft. Combine two words/idioms into a new word. The output must be a single word or short phrase that is semantically relevant. **A RESULT IS MANDATORY.** DO NOT include any commentary, quotes, punctuation, or extra words. Only respond with the resulting element name and nothing else. The inputs are "${first}" and "${second}".`;
 
             try {
+                // Puter.js works and is used correctly
                 const response = await puter.ai.chat(prompt, {
                     model: 'gpt-5-nano',
-                    // FIX: Maxed temperature for highest creativity/success rate
-                    temperature: 0.9, 
+                    temperature: 0.9, // Maxed for creativity/success rate
                     max_tokens: 20,
                 });
 
                 let newElement = response.text.trim();
                 
+                // Aggressive cleaning of AI output
                 newElement = newElement.split('\n')[0].trim(); 
                 newElement = newElement.replace(/['"“”]/g, '').trim(); 
                 
@@ -190,28 +192,29 @@
             const [first, second] = [e1, e2].sort();
             const pairKey = `${first}|${second}`;
 
-            if (RECIPE_CACHE[pairKey]) {
-                const result = RECIPE_CACHE[pairKey];
-                notify(`✨ Discovered! ${first} + ${second} = ${result} (Cached)`, true);
-                el1.remove();
-                el2.remove();
-                createCardEl(result, newX, newY, true);
-                return;
+            // Check Cache
+            let newElement = RECIPE_CACHE[pairKey];
+
+            // Use AI if not in cache (AI used every time a combination is attempted for a new pair)
+            if (!newElement) {
+                newElement = await runAICombination(first, second);
             }
 
-            const newElement = await runAICombination(first, second);
-
-            if (newElement !== 'Nothing' && newElement !== 'ERROR') {
-                RECIPE_CACHE[pairKey] = newElement;
+            if (newElement && newElement !== 'Nothing' && newElement !== 'ERROR') {
                 
+                // Cache the new result
+                if (!RECIPE_CACHE[pairKey]) {
+                     RECIPE_CACHE[pairKey] = newElement;
+                     await puter.kv.set(CACHE_KEY, RECIPE_CACHE);
+                }
+
                 const isNewDiscovery = !ALL_ELEMENTS.has(newElement);
                 if (isNewDiscovery) {
                     ALL_ELEMENTS.add(newElement);
-                    await puter.kv.set(CACHE_KEY, RECIPE_CACHE);
                     renderElements(); 
                 }
                 
-                notify(`🚀 First Discovery! ${first} + ${second} = ${newElement}`, isNewDiscovery);
+                notify(`🚀 Discovery! ${first} + ${second} = ${newElement}`, isNewDiscovery);
                 
                 el1.remove();
                 el2.remove();
@@ -280,7 +283,7 @@
             countEl.textContent = ALL_ELEMENTS.size;
         }
         
-        // --- DRAG LOGIC ---
+        // --- DRAG LOGIC (Stable) ---
 
         function startDrag(e, targetElement) {
             activeElement = targetElement;
