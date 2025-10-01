@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Infinite Craft Clone - FINAL FUNCTIONAL AI</title>
+    <title>Infinite Craft Clone - V3: FULL REWRITE & FIXES</title>
     <script src="https://js.puter.com/v2/"></script>
     <style>
         /* --- Styles for a near-perfect clone experience --- */
@@ -55,6 +55,9 @@
             font-size: 1em;
             font-weight: 600;
             transition: background-color 0.1s;
+            /* Enable native HTML5 drag for sidebar items */
+            user-select: none; 
+            -webkit-user-drag: element;
         }
         .sidebar-element-item:hover {
             background-color: #e0e0e0;
@@ -65,12 +68,16 @@
             background-color: #f7f7f7;
             overflow: hidden;
         }
+        /* The workspace is the drop target */
+        #workspace.drag-over {
+            box-shadow: inset 0 0 10px rgba(0, 123, 255, 0.5);
+        }
+
         .element-card {
             position: absolute;
             padding: 12px 18px;
             border-radius: 8px;
             background-color: #fff;
-            /* Stronger shadow for realism and visual separation */
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); 
             cursor: grab;
             font-size: 1.2em;
@@ -82,10 +89,9 @@
         }
         .element-card:active {
             cursor: grabbing;
-            /* Lift element slightly when grabbing */
             transform: scale(1.05); 
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
-            z-index: 50; /* Ensure active element is always on top */
+            z-index: 50; 
         }
         .new-discovery {
             animation: fadeInScale 1s ease-out;
@@ -130,7 +136,7 @@
 
     <script>
         // --- Core Game Constants & Puter.js Setup ---
-        const CACHE_KEY = 'infinite_craft_recipes_final_working';
+        const CACHE_KEY = 'infinite_craft_recipes_v3_final';
         const STARTING_ELEMENTS = ['Earth', 'Fire', 'Water', 'Wind'];
         let ALL_ELEMENTS = new Set(STARTING_ELEMENTS);
         let RECIPE_CACHE = {}; 
@@ -152,7 +158,6 @@
          * Notifies the user with a message banner.
          */
         function notify(message, isDiscovery = false) {
-            // Clear any existing timeout to keep the message visible if a new one arrives
             clearTimeout(dragTimeout);
             notificationEl.textContent = message;
             notificationEl.className = 'visible';
@@ -168,20 +173,17 @@
         async function runAICombination(first, second) {
             notify(`Combining ${first} + ${second}... AI is thinking! 🧠`);
 
-            // The core, highly constrained prompt for forcing a single, clean result.
-            const prompt = `You are the engine behind a game like Infinite Craft. Combine "${first}" and "${second}" into a new word or phrase that is semantically relevant. **A result is mandatory.** Respond ONLY with a single JSON object in the format: {"result": "Element Name"}. DO NOT include any other text, quotes, or markdown fences (like \`\`\`).`;
+            // Highly constrained prompt demanding a single JSON object.
+            const prompt = `You are the engine behind a game like Infinite Craft. Combine "${first}" and "${second}" into a new word or phrase that is semantically relevant. **A result is mandatory.** Respond ONLY with a single JSON object in the format: {"result": "Element Name"}. DO NOT include any other text, quotes, or markdown fences.`;
 
             try {
-                // puter.ai.chat works and is used correctly
                 const response = await puter.ai.chat(prompt, {
                     model: 'gpt-5-nano', 
-                    temperature: 0.9, // Maximum creativity
+                    temperature: 0.9, 
                     max_tokens: 50, 
                 });
                 
                 let text = response.text.trim();
-                
-                // Aggressively remove common markdown fences, which often wrap JSON
                 text = text.replace(/```json|```|json/gi, '').trim(); 
                 
                 const data = JSON.parse(text);
@@ -189,11 +191,9 @@
 
                 if (newElement && typeof newElement === 'string') {
                     newElement = newElement.trim();
-                    // Capitalize first letter
                     if (newElement.length > 0) {
                          newElement = newElement.charAt(0).toUpperCase() + newElement.slice(1);
                     }
-                    // Filter out undesirable long or obvious error results
                     if (newElement.length > 30 || newElement.toLowerCase().includes('nothing')) return 'Nothing';
                     return newElement;
                 }
@@ -201,7 +201,6 @@
                 return 'Nothing';
 
             } catch (error) {
-                // Catches JSON parsing errors (AI failed to provide valid JSON)
                 console.error("AI/JSON Parsing Error:", error);
                 notify(`AI Error: Combination failed for ${first} + ${second}.`, false);
                 return 'ERROR';
@@ -212,38 +211,32 @@
          * The core crafting logic. Checks cache, calls AI, caches result.
          */
         async function craftElements(e1, e2, newX, newY, el1, el2) {
-            // Combinations are commutative (order doesn't matter)
             const [first, second] = [e1, e2].sort();
             const pairKey = `${first}|${second}`;
 
             let newElement = RECIPE_CACHE[pairKey];
 
-            // 1. If not in cache, call the AI
             if (!newElement) {
                 newElement = await runAICombination(first, second);
             }
 
             if (newElement && newElement !== 'Nothing' && newElement !== 'ERROR') {
                 
-                // 2. Persist to cache (KV Store)
                 if (!RECIPE_CACHE[pairKey]) {
                      RECIPE_CACHE[pairKey] = newElement;
-                     // Only write to Puter.js KV if it's a new combination for this session
                      await puter.kv.set(CACHE_KEY, RECIPE_CACHE);
                 }
 
                 const isNewDiscovery = !ALL_ELEMENTS.has(newElement);
                 if (isNewDiscovery) {
                     ALL_ELEMENTS.add(newElement);
-                    renderElements(); // Update sidebar immediately
+                    renderElements(); 
                 }
                 
                 notify(`🚀 Discovery! ${first} + ${second} = ${newElement}`, isNewDiscovery);
                 
-                // Remove the two source elements
                 el1.remove();
                 el2.remove();
-                // Create the new resulting element card
                 createCardEl(newElement, newX, newY, true);
 
             } else {
@@ -283,6 +276,15 @@
             el.className = 'sidebar-element-item';
             el.textContent = elementName;
             el.dataset.element = elementName;
+            el.setAttribute('draggable', 'true'); // Required for native drag API
+            
+            // Set up native dragstart event for sidebar items
+            el.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', elementName);
+                e.dataTransfer.effectAllowed = 'move';
+                // Use a placeholder ID for drag tracking (distinguishing it from workspace cards)
+                e.target.id = 'temp-drag-source'; 
+            });
             return el;
         }
 
@@ -300,6 +302,8 @@
                 setTimeout(() => el.classList.remove('new-discovery'), 2000);
             }
 
+            // Set up MOUSE events for the workspace cards (for custom free dragging)
+            el.addEventListener('mousedown', (e) => startDrag(e, el));
             workspaceEl.appendChild(el);
             return el;
         }
@@ -307,23 +311,23 @@
         function renderElements() {
             inventoryListEl.innerHTML = '';
             
-            // Sort elements alphabetically for clean sidebar display
             Array.from(ALL_ELEMENTS).sort().forEach(element => {
                 inventoryListEl.appendChild(createSidebarEl(element));
             });
             countEl.textContent = ALL_ELEMENTS.size;
         }
         
-        // --- DRAG LOGIC (Real-time positioning) ---
+        // --- DRAG LOGIC (Custom for Cards, Native for Sidebar) ---
 
+        // Custom drag for elements already in the workspace
         function startDrag(e, targetElement) {
             activeElement = targetElement;
+            workspaceRect = workspaceEl.getBoundingClientRect();
             
             const rect = activeElement.getBoundingClientRect();
             xOffset = e.clientX - rect.left; 
             yOffset = e.clientY - rect.top;
 
-            // Set high z-index and active class for visual feedback
             activeElement.style.zIndex = 50; 
             activeElement.style.cursor = 'grabbing';
             
@@ -335,13 +339,8 @@
             if (!activeElement) return;
             e.preventDefault();
 
-            // Calculate new position relative to the workspace
             let newLeft = e.clientX - xOffset - workspaceRect.left;
             let newTop = e.clientY - yOffset - workspaceRect.top;
-
-            // Constrain movement to the workspace boundaries
-            newLeft = Math.max(0, newLeft);
-            newTop = Math.max(0, newTop);
 
             activeElement.style.left = `${newLeft}px`;
             activeElement.style.top = `${newTop}px`;
@@ -353,7 +352,6 @@
         function dragEnd(e) {
             if (!activeElement) return;
 
-            // Snap back to final position
             activeElement.style.left = `${finalX}px`;
             activeElement.style.top = `${finalY}px`;
             
@@ -369,11 +367,10 @@
                 const activeRect = activeElement.getBoundingClientRect();
                 const targetRect = targetElement.getBoundingClientRect();
                 
-                // Calculate the midpoint for the new combined element
                 const newX = ((activeRect.left + targetRect.left) / 2) - workspaceRect.left;
                 const newY = ((activeRect.top + targetRect.top) / 2) - workspaceRect.top;
 
-                // Execute the core logic
+                // Crafting occurs here!
                 craftElements(e1, e2, newX, newY, activeElement, targetElement);
             } 
             
@@ -381,30 +378,36 @@
             document.removeEventListener('mousemove', drag);
             document.removeEventListener('mouseup', dragEnd);
         }
+        
+        // --- NATIVE DRAG AND DROP API HANDLERS (for Sidebar to Workspace) ---
 
-        function generalMouseDown(e) {
-            workspaceRect = workspaceEl.getBoundingClientRect();
+        workspaceEl.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy'; 
+            workspaceEl.classList.add('drag-over');
+        });
 
-            // 1. If clicking an element in the sidebar (Inventory)
-            if (e.target.classList.contains('sidebar-element-item')) {
-                e.preventDefault(); 
+        workspaceEl.addEventListener('dragleave', (e) => {
+            workspaceEl.classList.remove('drag-over');
+        });
+
+        workspaceEl.addEventListener('drop', (e) => {
+            e.preventDefault();
+            workspaceEl.classList.remove('drag-over');
+
+            const draggedName = e.dataTransfer.getData('text/plain');
+            
+            // Check if drop originated from the sidebar or another card
+            if (draggedName) {
+                const x = e.clientX - workspaceEl.getBoundingClientRect().left - 20; 
+                const y = e.clientY - workspaceEl.getBoundingClientRect().top - 20;
                 
-                const name = e.target.dataset.element;
-                
-                // Position the new card near the mouse pointer
-                const x = e.clientX - workspaceRect.left - 20; 
-                const y = e.clientY - workspaceRect.top - 20;
+                const card = createCardEl(draggedName, x, y);
 
-                const card = createCardEl(name, x, y);
-                
-                return startDrag(e, card); 
-
-            // 2. If clicking an element on the workspace
-            } else if (e.target.classList.contains('element-card')) {
-                e.preventDefault();
-                return startDrag(e, e.target);
+                // Instantly start the custom mouse drag to continue dragging the new element
+                startDrag({clientX: e.clientX, clientY: e.clientY}, card);
             }
-        }
+        });
         
         // --- Initialization ---
 
@@ -423,8 +426,10 @@
             const discoveredElements = new Set(Object.values(RECIPE_CACHE));
             ALL_ELEMENTS = new Set([...STARTING_ELEMENTS, ...discoveredElements]);
 
-            document.addEventListener('mousedown', generalMouseDown);
+            // Set the initial size of the workspace for drag calculations
+            workspaceRect = workspaceEl.getBoundingClientRect();
             
+            // Render the initial list
             renderElements();
 
             notify(`Ready! Found ${ALL_ELEMENTS.size} unique elements.`, true);
