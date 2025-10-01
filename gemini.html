@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Ultimate Puter.js Infinite Craft (DRAG FIXED)</title>
+    <title>Ultimate Puter.js Infinite Craft (FINAL)</title>
     <script src="https://js.puter.com/v2/"></script>
     <style>
         /* --- General Layout and Reset --- */
@@ -53,7 +53,7 @@
             border-radius: 6px;
             background-color: #f7f7f7;
             border: 1px solid #ddd;
-            cursor: grab; /* Set to grab to indicate drag functionality */
+            cursor: grab;
             font-size: 1em;
             font-weight: 600;
             transition: background-color 0.1s;
@@ -134,7 +134,7 @@
 
     <script>
         // --- Core Game Constants & Puter.js Setup ---
-        const CACHE_KEY = 'infinite_craft_recipes_ultimate_fixed_final';
+        const CACHE_KEY = 'infinite_craft_recipes_ultimate_final';
         const STARTING_ELEMENTS = ['Earth', 'Fire', 'Water', 'Wind'];
         let ALL_ELEMENTS = new Set(STARTING_ELEMENTS);
         let RECIPE_CACHE = {}; 
@@ -147,11 +147,10 @@
 
         // Drag State
         let activeElement = null;
-        let xOffset = 0, yOffset = 0; // Offset from mouse to element corner
-        let workspaceRect; // Cached workspace dimensions
+        let xOffset = 0, yOffset = 0; 
+        let workspaceRect; 
 
-        // --- Utility Functions (Omitted for brevity, assumed functional from previous steps) ---
-        // (notify, runAICombination, craftElements, getOverlapTarget)
+        // --- Utility Functions ---
 
         function notify(message, isDiscovery = false) {
             notificationEl.textContent = message;
@@ -162,19 +161,43 @@
             }, 3000);
         }
 
+        /**
+         * The AI "Fusion Engine" logic using Puter.js.
+         * FIX: Enhanced prompt and aggressive output cleaning.
+         */
         async function runAICombination(first, second) {
             notify(`Combining ${first} + ${second}... AI is thinking! 🧠`);
-            const prompt = `You are the engine behind a game like Infinite Craft. Your job is to combine two words/idioms into a new one. The combinations should look for something that is semantically "in between" the two inputs. For instance "fire" + "water" would yield "steam". Just respond with only the output word, no chit-chat, no thoughts, just the first word that comes to your mind and stop. The inputs are "${first}" and "${second}".`;
+
+            // **********************************************
+            // FIX: Enhanced prompt to demand single output
+            // **********************************************
+            const prompt = `You are the engine behind a game like Infinite Craft. Combine two words/idioms into a new word. The output must be a single word or short phrase that is semantically relevant. **DO NOT** include any commentary, quotes, punctuation, or extra words. Only respond with the resulting element name and nothing else. The inputs are "${first}" and "${second}".`;
+
             try {
                 const response = await puter.ai.chat(prompt, {
                     model: 'gpt-5-nano',
                     temperature: 0.2, 
-                    max_tokens: 5,
+                    max_tokens: 10,
                 });
-                let newElement = response.text.trim().replace(/[."]/g, '');
+
+                let newElement = response.text.trim();
+                
+                // **********************************************
+                // FIX: Aggressive cleanup to ensure only the element remains
+                // **********************************************
+                newElement = newElement.split('\n')[0].trim(); // Take only the first line
+                newElement = newElement.replace(/['"“”]/g, '').trim(); // Remove various quotes
+                
+                // Capitalize for element consistency
+                if (newElement.length > 0) {
+                     newElement = newElement.charAt(0).toUpperCase() + newElement.slice(1);
+                }
+                
+                // Check if the result is unusable
                 if (!newElement || newElement.toLowerCase().includes('sorry') || newElement.length > 30) {
                     return 'Nothing';
                 }
+
                 return newElement;
             } catch (error) {
                 console.error("AI Error:", error);
@@ -183,7 +206,11 @@
             }
         }
 
+        /**
+         * Core combination function.
+         */
         async function craftElements(e1, e2, newX, newY, el1, el2) {
+            // Normalize elements
             const [first, second] = [e1, e2].sort();
             const pairKey = `${first}|${second}`;
 
@@ -200,16 +227,20 @@
 
             if (newElement !== 'Nothing' && newElement !== 'ERROR') {
                 RECIPE_CACHE[pairKey] = newElement;
+                
                 const isNewDiscovery = !ALL_ELEMENTS.has(newElement);
                 if (isNewDiscovery) {
                     ALL_ELEMENTS.add(newElement);
                     await puter.kv.set(CACHE_KEY, RECIPE_CACHE);
                     renderElements(); 
                 }
+                
                 notify(`🚀 First Discovery! ${first} + ${second} = ${newElement}`, isNewDiscovery);
+                
                 el1.remove();
                 el2.remove();
                 createCardEl(newElement, newX, newY, true);
+
             } else {
                 notify(`❌ Nothing combined with ${first} + ${second}.`, false);
             }
@@ -223,6 +254,8 @@
                 if (el === droppedElement) continue;
 
                 const targetRect = el.getBoundingClientRect();
+
+                // Standard AABB collision check
                 const isOverlapping = !(
                     droppedRect.right < targetRect.left || 
                     droppedRect.left > targetRect.right || 
@@ -272,12 +305,11 @@
             countEl.textContent = ALL_ELEMENTS.size;
         }
         
-        // --- FIXED DRAG LOGIC ---
+        // --- DRAG LOGIC (Fixed and Consolidated) ---
 
         function startDrag(e, targetElement) {
             activeElement = targetElement;
             
-            // Calculate offset for smooth dragging
             const rect = activeElement.getBoundingClientRect();
             xOffset = e.clientX - rect.left; 
             yOffset = e.clientY - rect.top;
@@ -285,22 +317,21 @@
             activeElement.style.zIndex = 20;
             activeElement.style.cursor = 'grabbing';
             
-            // Set global listeners on the document to capture movement outside the element
             document.addEventListener('mousemove', drag);
             document.addEventListener('mouseup', dragEnd);
         }
 
         function drag(e) {
             if (!activeElement) return;
-            e.preventDefault(); // Crucial to prevent default selection/dragging behavior
+            e.preventDefault();
 
             // Calculate new position relative to the workspace's top-left corner
             let newLeft = e.clientX - xOffset - workspaceRect.left;
             let newTop = e.clientY - yOffset - workspaceRect.top;
 
-            // Apply boundaries (optional, but prevents elements from disappearing off screen)
-            newLeft = Math.max(0, Math.min(newLeft, workspaceRect.width - activeElement.offsetWidth));
-            newTop = Math.max(0, Math.min(newTop, workspaceRect.height - activeElement.offsetHeight));
+            // Simple boundary limits
+            newLeft = Math.max(0, newLeft);
+            newTop = Math.max(0, newTop);
 
             activeElement.style.left = `${newLeft}px`;
             activeElement.style.top = `${newTop}px`;
@@ -310,7 +341,7 @@
             if (!activeElement) return;
 
             activeElement.style.zIndex = 10;
-            activeElement.style.cursor = 'grab'; // Restore default cursor
+            activeElement.style.cursor = 'grab';
             
             const targetElement = getOverlapTarget(activeElement);
             
@@ -318,25 +349,23 @@
                 const e1 = activeElement.dataset.element;
                 const e2 = targetElement.dataset.element;
 
-                // Calculate the center point for the resulting element
                 const activeRect = activeElement.getBoundingClientRect();
                 const targetRect = targetElement.getBoundingClientRect();
                 
+                // Center the new element between the two combined elements
                 const newX = ((activeRect.left + targetRect.left) / 2) - workspaceRect.left;
                 const newY = ((activeRect.top + targetRect.top) / 2) - workspaceRect.top;
 
-                // Elements are removed inside craftElements on success
                 craftElements(e1, e2, newX, newY, activeElement, targetElement);
             } 
             
-            // Cleanup drag state
             activeElement = null;
             document.removeEventListener('mousemove', drag);
             document.removeEventListener('mouseup', dragEnd);
         }
 
         function generalMouseDown(e) {
-            // Cache workspace dimensions once per interaction
+            // Always update workspace dimensions at the start of an interaction
             workspaceRect = workspaceEl.getBoundingClientRect();
 
             // 1. Sidebar Item: Clone and Drag
@@ -345,9 +374,9 @@
                 
                 const name = e.target.dataset.element;
                 
-                // Calculate position relative to workspace top-left
-                const x = e.clientX - workspaceRect.left;
-                const y = e.clientY - workspaceRect.top;
+                // Position clone slightly offset from the mouse for better feel
+                const x = e.clientX - workspaceRect.left - 20; 
+                const y = e.clientY - workspaceRect.top - 20;
 
                 const card = createCardEl(name, x, y);
                 
@@ -379,7 +408,6 @@
             // Set up the single entry point for all drag operations on the document
             document.addEventListener('mousedown', generalMouseDown);
             
-            // Initial render
             renderElements();
 
             notify(`Ready! You have discovered ${ALL_ELEMENTS.size} elements.`, true);
