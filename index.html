@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Infinite Craft Clone - V5: NEAL.FUN REDESIGN</title>
+    <title>Infinite Craft Clone - V6: MAX CREATIVITY</title>
     <script src="https://js.puter.com/v2/"></script>
     <style>
         /* --- NEAL.FUN INSPIRED STYLES --- */
@@ -155,7 +155,7 @@
 
     <script>
         // --- Core Game Constants & Puter.js Setup ---
-        const CACHE_KEY = 'infinite_craft_recipes_v5_redesign'; 
+        const CACHE_KEY = 'infinite_craft_recipes_v6_max_creativity'; 
         const STARTING_ELEMENTS = ['Earth', 'Fire', 'Water', 'Wind'];
         let ALL_ELEMENTS = new Set(STARTING_ELEMENTS);
         let RECIPE_CACHE = {}; 
@@ -209,11 +209,11 @@
             `;
 
             try {
-                // *** PUTER.JS AI CALL ***
-                // CHANGED MODEL to 'gpt-5' for better creativity and less 'Nothing' results
+                // *** CRITICAL CHANGE: MAX TEMPERATURE ***
+                // Setting temperature to 2.0 maximizes creativity and randomness
                 const response = await puter.ai.chat(prompt, {
                     model: 'gpt-5', 
-                    temperature: 0.9,    
+                    temperature: 2.0,    // <-- MAXIMUM CREATIVITY
                     max_tokens: 50,      
                 });
                 
@@ -250,6 +250,8 @@
 
             } catch (error) {
                 console.error("AI API or Network Error:", error);
+                // Note: Network errors (like Puter.js being offline or rate-limited)
+                // will result in the cards being kept on the board (see craftElements).
                 return 'ERROR';
             }
         }
@@ -290,10 +292,13 @@
                 createCardEl(newElement, newX, newY, true);
 
             } else {
-                // *** CRITICAL CHANGE: DO NOT REMOVE ELEMENTS ON 'NOTHING' OR 'ERROR' ***
-                notify(`❌ Nothing happens. (Combination: ${first} + ${second})`, false);
-                // The cards remain in the sandbox for the user to try a different combination
-                // The code implicitly returns here, leaving el1 and el2 on the board.
+                // If Nothing or ERROR, the elements remain on the board
+                if (newElement === 'ERROR') {
+                    notify(`⚠️ AI Request Failed! Try again in a moment.`, false);
+                } else {
+                    notify(`❌ Nothing happens. (Combination: ${first} + ${second})`, false);
+                }
+                // The cards remain in the sandbox. The activeElement is cleared in dragEnd.
             }
         }
 
@@ -417,6 +422,7 @@
                 const newX = ((activeRect.left + targetRect.left + targetRect.width / 2) / 2) - workspaceRect.left - (activeRect.width / 2);
                 const newY = ((activeRect.top + targetRect.top + targetRect.height / 2) / 2) - workspaceRect.top - (activeRect.height / 2);
 
+                // This call handles the result, including "Nothing" and "ERROR"
                 craftElements(e1, e2, newX, newY, activeElement, targetElement);
             } 
             
