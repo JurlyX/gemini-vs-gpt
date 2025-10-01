@@ -155,7 +155,6 @@
 
     <script>
         // --- Core Game Constants & Puter.js Setup ---
-        // CACHE_KEY stores the discovered recipes in Puter's Key-Value store
         const CACHE_KEY = 'infinite_craft_recipes_v5_redesign'; 
         const STARTING_ELEMENTS = ['Earth', 'Fire', 'Water', 'Wind'];
         let ALL_ELEMENTS = new Set(STARTING_ELEMENTS);
@@ -190,7 +189,6 @@
 
         /**
          * AI Fusion Engine using puter.ai.chat()
-         * Uses strict prompting and JSON for reliable results.
          */
         async function runAICombination(first, second) {
             notify(`Combining ${first} + ${second}... AI is thinking! 🧠`);
@@ -212,8 +210,9 @@
 
             try {
                 // *** PUTER.JS AI CALL ***
+                // CHANGED MODEL to 'gpt-5' for better creativity and less 'Nothing' results
                 const response = await puter.ai.chat(prompt, {
-                    model: 'gpt-5-nano', 
+                    model: 'gpt-5', 
                     temperature: 0.9,    
                     max_tokens: 50,      
                 });
@@ -259,14 +258,12 @@
          * The core crafting logic. Checks cache, calls AI, caches result (using puter.kv).
          */
         async function craftElements(e1, e2, newX, newY, el1, el2) {
-            // Sort elements for commutative property (Water + Fire is same as Fire + Water)
             const [first, second] = [e1, e2].sort();
             const pairKey = `${first}|${second}`;
 
             let newElement = RECIPE_CACHE[pairKey];
 
             if (!newElement) {
-                // If not cached, run the AI
                 newElement = await runAICombination(first, second);
             }
 
@@ -276,7 +273,6 @@
                 if (!RECIPE_CACHE[pairKey]) {
                      RECIPE_CACHE[pairKey] = newElement;
                      // *** PUTER.JS KV CALL (Save Cache) ***
-                     // Saves the new recipe to the global Key-Value store
                      await puter.kv.set(CACHE_KEY, RECIPE_CACHE);
                 }
 
@@ -288,15 +284,16 @@
                 
                 notify(`🚀 ${newElement}! (${first} + ${second})`, isNewDiscovery);
                 
+                // Remove the two old elements and create the new one
                 el1.remove();
                 el2.remove();
                 createCardEl(newElement, newX, newY, true);
 
             } else {
-                notify(`❌ Nothing happens.`, false);
-                // On 'Nothing' result, delete the cards to clear the workspace
-                el1.remove();
-                el2.remove();
+                // *** CRITICAL CHANGE: DO NOT REMOVE ELEMENTS ON 'NOTHING' OR 'ERROR' ***
+                notify(`❌ Nothing happens. (Combination: ${first} + ${second})`, false);
+                // The cards remain in the sandbox for the user to try a different combination
+                // The code implicitly returns here, leaving el1 and el2 on the board.
             }
         }
 
@@ -358,7 +355,6 @@
         function renderElements() {
             inventoryListEl.innerHTML = '';
             
-            // Render the sorted list of elements
             Array.from(ALL_ELEMENTS).sort().forEach(element => {
                 inventoryListEl.appendChild(createSidebarEl(element));
             });
@@ -440,7 +436,6 @@
                 
                 const name = e.target.dataset.element;
                 
-                // Initial position to place the new card near the cursor
                 const x = e.clientX - workspaceRect.left - 20; 
                 const y = e.clientY - workspaceRect.top - 20;
 
@@ -460,7 +455,6 @@
         async function initializeGame() {
             try {
                 // *** PUTER.JS KV LOAD ***
-                // Loads the previously discovered recipes for persistence
                 const cachedRecipes = await puter.kv.get(CACHE_KEY);
                 if (cachedRecipes) {
                     RECIPE_CACHE = cachedRecipes;
@@ -469,7 +463,6 @@
                 console.warn("Could not load cache, starting fresh.");
             }
 
-            // Populate ALL_ELEMENTS with starting elements and all discovered results from the cache
             const discoveredElements = new Set(Object.values(RECIPE_CACHE));
             ALL_ELEMENTS = new Set([...STARTING_ELEMENTS, ...discoveredElements]);
 
