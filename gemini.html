@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Ultimate Puter.js Infinite Craft (AI-ONLY)</title>
+    <title>Ultimate Puter.js Infinite Craft (JSON REDESIGN)</title>
     <script src="https://js.puter.com/v2/"></script>
     <style>
         /* (CSS is stable) */
@@ -126,8 +126,6 @@
         let ALL_ELEMENTS = new Set(STARTING_ELEMENTS);
         let RECIPE_CACHE = {}; 
         
-        // HARDCODED_RECIPES removed as requested
-        
         const inventoryListEl = document.getElementById('inventory-list');
         const workspaceEl = document.getElementById('workspace');
         const notificationEl = document.getElementById('notification');
@@ -150,40 +148,45 @@
         }
 
         /**
-         * AI Fusion Engine - System Prompt is Correct
+         * AI Fusion Engine - REDESIGNED for Structured JSON Output
          */
         async function runAICombination(first, second) {
             notify(`Combining ${first} + ${second}... AI is thinking! 🧠`);
 
-            // System Prompt: Explicitly requests clean, mandatory result.
-            const prompt = `You are the engine behind a game like Infinite Craft. Combine two words/idioms into a new word. The output must be a single word or short phrase that is semantically relevant. **A RESULT IS MANDATORY.** DO NOT include any commentary, quotes, punctuation, or extra words. Only respond with the resulting element name and nothing else. The inputs are "${first}" and "${second}".`;
+            // NEW System Prompt: Explicitly requests JSON format
+            const prompt = `You are the engine behind a game like Infinite Craft. Combine "${first}" and "${second}" into a new word. The output must be a single element name that is semantically relevant. **A result is mandatory.** Respond ONLY with a single JSON object in the format: {"result": "Element Name"}. DO NOT include any other text, quotes, or markdown.`;
 
             try {
-                // Puter.js works and is used correctly
                 const response = await puter.ai.chat(prompt, {
                     model: 'gpt-5-nano',
-                    temperature: 0.9, // Maxed for creativity/success rate
-                    max_tokens: 20,
+                    temperature: 0.9, 
+                    max_tokens: 50, // Increased tokens for JSON overhead
                 });
+                
+                let text = response.text.trim();
+                
+                // Aggressive cleaning of potential markdown fences
+                text = text.replace(/```json|```|json/gi, '').trim(); 
+                
+                // Attempt JSON parsing (most reliable way to get clean data)
+                const data = JSON.parse(text);
+                let newElement = data.result;
 
-                let newElement = response.text.trim();
-                
-                // Aggressive cleaning of AI output
-                newElement = newElement.split('\n')[0].trim(); 
-                newElement = newElement.replace(/['"“”]/g, '').trim(); 
-                
-                if (newElement.length > 0) {
-                     newElement = newElement.charAt(0).toUpperCase() + newElement.slice(1);
+                if (newElement && typeof newElement === 'string') {
+                    newElement = newElement.trim();
+                    if (newElement.length > 0) {
+                         newElement = newElement.charAt(0).toUpperCase() + newElement.slice(1);
+                    }
+                    if (newElement.length > 30) return 'Nothing';
+                    return newElement;
                 }
                 
-                if (!newElement || newElement.toLowerCase().includes('sorry') || newElement.length > 30) {
-                    return 'Nothing';
-                }
+                return 'Nothing';
 
-                return newElement;
             } catch (error) {
-                console.error("AI Error:", error);
-                notify('AI Error: Could not combine elements.', false);
+                // If JSON parsing fails (i.e., AI output a non-JSON refusal/chatter)
+                console.error("AI/JSON Parsing Error:", error);
+                notify('AI Error: Could not parse combination result.', false);
                 return 'ERROR';
             }
         }
