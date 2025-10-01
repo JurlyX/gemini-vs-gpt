@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Ultimate Puter.js Infinite Craft (FINAL AND FIXED)</title>
+    <title>Ultimate Puter.js Infinite Craft (COMBINATION FIXED)</title>
     <script src="https://js.puter.com/v2/"></script>
     <style>
-        /* (CSS is the same as the previous version) */
+        /* (CSS is the same for layout consistency) */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
@@ -40,11 +40,6 @@
             padding-bottom: 10px;
             border-bottom: 2px solid #f0f0f0;
             font-size: 1.2em;
-        }
-        .sidebar-element-list {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
         }
         .sidebar-element-item {
             padding: 10px;
@@ -131,18 +126,14 @@
         let ALL_ELEMENTS = new Set(STARTING_ELEMENTS);
         let RECIPE_CACHE = {}; 
         
-        // UI Elements
         const inventoryListEl = document.getElementById('inventory-list');
         const workspaceEl = document.getElementById('workspace');
         const notificationEl = document.getElementById('notification');
         const countEl = document.getElementById('count');
 
-        // Drag State
         let activeElement = null;
         let xOffset = 0, yOffset = 0; 
         let workspaceRect; 
-        
-        // FIX: Variables to store the final coordinates during drag
         let finalX = 0, finalY = 0; 
 
         // --- Utility Functions ---
@@ -156,6 +147,10 @@
             }, 3000);
         }
 
+        /**
+         * The AI "Fusion Engine" logic using Puter.js.
+         * FIX: Increased temperature to encourage more successful, creative combinations.
+         */
         async function runAICombination(first, second) {
             notify(`Combining ${first} + ${second}... AI is thinking! 🧠`);
 
@@ -164,8 +159,9 @@
             try {
                 const response = await puter.ai.chat(prompt, {
                     model: 'gpt-5-nano',
-                    temperature: 0.2, 
-                    max_tokens: 10,
+                    // FIX: Increased temperature to 0.7 for more creative results
+                    temperature: 0.7, 
+                    max_tokens: 20,
                 });
 
                 let newElement = response.text.trim();
@@ -283,7 +279,7 @@
             countEl.textContent = ALL_ELEMENTS.size;
         }
         
-        // --- DRAG LOGIC (Timing Fix Applied) ---
+        // --- DRAG LOGIC ---
 
         function startDrag(e, targetElement) {
             activeElement = targetElement;
@@ -312,7 +308,7 @@
             activeElement.style.left = `${newLeft}px`;
             activeElement.style.top = `${newTop}px`;
             
-            // FIX: Store the final position with every move
+            // Store the final position with every move
             finalX = newLeft;
             finalY = newTop;
         }
@@ -320,7 +316,7 @@
         function dragEnd(e) {
             if (!activeElement) return;
 
-            // FIX: Ensure the final position is explicitly set/rendered 
+            // Ensure the final position is explicitly set/rendered 
             activeElement.style.left = `${finalX}px`;
             activeElement.style.top = `${finalY}px`;
             
@@ -355,7 +351,6 @@
                 
                 const name = e.target.dataset.element;
                 
-                // Position clone slightly offset from the mouse for better feel
                 const x = e.clientX - workspaceRect.left - 20; 
                 const y = e.clientY - workspaceRect.top - 20;
 
