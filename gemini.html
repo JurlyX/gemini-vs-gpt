@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Ultimate Puter.js Infinite Craft (JSON REDESIGN)</title>
+    <title>Ultimate Puter.js Infinite Craft (JSON REDESIGN - FINAL)</title>
     <script src="https://js.puter.com/v2/"></script>
     <style>
         /* (CSS is stable) */
@@ -148,19 +148,19 @@
         }
 
         /**
-         * AI Fusion Engine - REDESIGNED for Structured JSON Output
+         * AI Fusion Engine - REDESIGNED for Structured JSON Output (Maximum Reliability)
          */
         async function runAICombination(first, second) {
             notify(`Combining ${first} + ${second}... AI is thinking! 🧠`);
 
-            // NEW System Prompt: Explicitly requests JSON format
+            // System Prompt: Demanding JSON for reliable parsing.
             const prompt = `You are the engine behind a game like Infinite Craft. Combine "${first}" and "${second}" into a new word. The output must be a single element name that is semantically relevant. **A result is mandatory.** Respond ONLY with a single JSON object in the format: {"result": "Element Name"}. DO NOT include any other text, quotes, or markdown.`;
 
             try {
                 const response = await puter.ai.chat(prompt, {
                     model: 'gpt-5-nano',
                     temperature: 0.9, 
-                    max_tokens: 50, // Increased tokens for JSON overhead
+                    max_tokens: 50, 
                 });
                 
                 let text = response.text.trim();
@@ -184,9 +184,9 @@
                 return 'Nothing';
 
             } catch (error) {
-                // If JSON parsing fails (i.e., AI output a non-JSON refusal/chatter)
+                // Catches both AI failure and JSON parsing failure
                 console.error("AI/JSON Parsing Error:", error);
-                notify('AI Error: Could not parse combination result.', false);
+                notify('AI Error: Could not parse combination result. Try again.', false);
                 return 'ERROR';
             }
         }
