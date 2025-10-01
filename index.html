@@ -189,47 +189,78 @@
 
         /**
          * AI Fusion Engine using puter.ai.chat()
-         * Forces Structured JSON Output for maximum reliability.
+         * FOR A REWRITE, FOCUS ON THIS FUNCTION
          */
         async function runAICombination(first, second) {
             notify(`Combining ${first} + ${second}... AI is thinking! 🧠`);
 
-            // Strict prompt to enforce JSON output for a clean element name.
-            const prompt = `You are the engine behind a game like Infinite Craft. Combine "${first}" and "${second}" into a new word or phrase that is semantically relevant. A result is mandatory. Respond ONLY with a single JSON object in the format: {"result": "Element Name"}. DO NOT include any other text, quotes, or markdown fences.`;
+            // --- REWRITTEN PROMPT FOR BETTER RESULTS ---
+            const prompt = `
+                You are the core logic engine for a crafting game like Infinite Craft.
+                Your task is to combine two elements, "${first}" and "${second}", to create a single, logical, or surprising new element.
+                The new element must be a short, single word or simple phrase.
+                
+                - EXAMPLE: Fire + Water = Steam
+                - RULE 1: Respond ONLY with a single JSON object.
+                - RULE 2: The result key must be "element".
+                - RULE 3: Do not include any explanation, quotes, or markdown fences (e.g., \`\`\`json).
+                - RULE 4: If the combination results in nothing, use the exact string "Nothing".
+                
+                The inputs are "${first}" and "${second}".
+                Your response must be ONLY a valid JSON object: {"element": "Result"}.
+            `;
 
             try {
                 // *** PUTER.JS AI CALL ***
                 const response = await puter.ai.chat(prompt, {
                     model: 'gpt-5-nano', // A fast, capable model
-                    temperature: 0.9, 
-                    max_tokens: 50, 
+                    temperature: 0.9,    // High temperature for creativity
+                    max_tokens: 50,      // Keep the response short
                 });
                 
                 let text = response.text.trim();
-                // Clean up any markdown fences if the model still includes them
+                // Aggressive cleanup to remove potential markdown fences
                 text = text.replace(/```json|```|json/gi, '').trim(); 
                 
-                const data = JSON.parse(text);
-                let newElement = data.result;
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (parseError) {
+                    console.error("Failed to parse AI response JSON:", text, parseError);
+                    // Fallback to simple text extraction if JSON is malformed
+                    // This is less reliable but better than nothing
+                    if (text.length > 0 && !text.includes('{')) {
+                        return text; 
+                    }
+                    return 'ERROR';
+                }
+                
+                let newElement = data.element || data.result; // Check both keys for flexibility
 
                 if (newElement && typeof newElement === 'string') {
                     newElement = newElement.trim();
-                    // Basic capitalization (as is common in the game)
+                    
+                    // Basic cleanup and capitalization
                     if (newElement.length > 0) {
                          newElement = newElement.charAt(0).toUpperCase() + newElement.slice(1);
                     }
-                    if (newElement.length > 30 || newElement.toLowerCase().includes('nothing')) return 'Nothing';
+                    
+                    // Filter for bad results
+                    if (newElement.length > 30 || newElement.toLowerCase().includes('nothing')) {
+                        return 'Nothing';
+                    }
                     return newElement;
                 }
                 
                 return 'Nothing';
 
             } catch (error) {
-                console.error("AI/JSON Parsing Error:", error);
+                console.error("AI API or Network Error:", error);
                 notify(`AI Error: Combination failed for ${first} + ${second}.`, false);
                 return 'ERROR';
             }
         }
+        // --- END OF REWRITTEN AI FUNCTION ---
 
         /**
          * The core crafting logic. Checks cache, calls AI, caches result (using puter.kv).
@@ -249,7 +280,7 @@
                 // Cache and save if this is a truly new combination
                 if (!RECIPE_CACHE[pairKey]) {
                      RECIPE_CACHE[pairKey] = newElement;
-                     // *** PUTER.JS KV CALL ***
+                     // *** PUTER.JS KV CALL (Save Cache) ***
                      await puter.kv.set(CACHE_KEY, RECIPE_CACHE);
                 }
 
