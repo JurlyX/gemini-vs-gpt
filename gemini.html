@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Ultimate Puter.js Infinite Craft (FINAL)</title>
+    <title>Ultimate Puter.js Infinite Craft (FINAL AND FIXED)</title>
     <script src="https://js.puter.com/v2/"></script>
     <style>
-        /* --- General Layout and Reset --- */
+        /* (CSS is the same as the previous version) */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
@@ -24,8 +24,6 @@
             user-select: none;
             z-index: 50; 
         }
-
-        /* --- Sidebar (Inventory) --- */
         #sidebar {
             width: 250px;
             background-color: #fff;
@@ -61,16 +59,12 @@
         .sidebar-element-item:hover {
             background-color: #e9e9e9;
         }
-
-        /* --- Workspace (The Main Grid) --- */
         #workspace {
             flex-grow: 1;
             position: relative;
             background-color: #f9f9f9;
             overflow: hidden;
         }
-
-        /* --- Element Card (Draggable Item) --- */
         .element-card {
             position: absolute;
             padding: 15px 20px;
@@ -99,8 +93,6 @@
             50% { transform: scale(1.1); opacity: 1; }
             100% { transform: scale(1); opacity: 1; }
         }
-
-        /* --- Result Notification --- */
         #notification {
             position: absolute;
             top: 20px;
@@ -149,6 +141,9 @@
         let activeElement = null;
         let xOffset = 0, yOffset = 0; 
         let workspaceRect; 
+        
+        // FIX: Variables to store the final coordinates during drag
+        let finalX = 0, finalY = 0; 
 
         // --- Utility Functions ---
 
@@ -161,16 +156,9 @@
             }, 3000);
         }
 
-        /**
-         * The AI "Fusion Engine" logic using Puter.js.
-         * FIX: Enhanced prompt and aggressive output cleaning.
-         */
         async function runAICombination(first, second) {
             notify(`Combining ${first} + ${second}... AI is thinking! 🧠`);
 
-            // **********************************************
-            // FIX: Enhanced prompt to demand single output
-            // **********************************************
             const prompt = `You are the engine behind a game like Infinite Craft. Combine two words/idioms into a new word. The output must be a single word or short phrase that is semantically relevant. **DO NOT** include any commentary, quotes, punctuation, or extra words. Only respond with the resulting element name and nothing else. The inputs are "${first}" and "${second}".`;
 
             try {
@@ -182,18 +170,13 @@
 
                 let newElement = response.text.trim();
                 
-                // **********************************************
-                // FIX: Aggressive cleanup to ensure only the element remains
-                // **********************************************
-                newElement = newElement.split('\n')[0].trim(); // Take only the first line
-                newElement = newElement.replace(/['"“”]/g, '').trim(); // Remove various quotes
+                newElement = newElement.split('\n')[0].trim(); 
+                newElement = newElement.replace(/['"“”]/g, '').trim(); 
                 
-                // Capitalize for element consistency
                 if (newElement.length > 0) {
                      newElement = newElement.charAt(0).toUpperCase() + newElement.slice(1);
                 }
                 
-                // Check if the result is unusable
                 if (!newElement || newElement.toLowerCase().includes('sorry') || newElement.length > 30) {
                     return 'Nothing';
                 }
@@ -206,11 +189,7 @@
             }
         }
 
-        /**
-         * Core combination function.
-         */
         async function craftElements(e1, e2, newX, newY, el1, el2) {
-            // Normalize elements
             const [first, second] = [e1, e2].sort();
             const pairKey = `${first}|${second}`;
 
@@ -255,7 +234,6 @@
 
                 const targetRect = el.getBoundingClientRect();
 
-                // Standard AABB collision check
                 const isOverlapping = !(
                     droppedRect.right < targetRect.left || 
                     droppedRect.left > targetRect.right || 
@@ -305,7 +283,7 @@
             countEl.textContent = ALL_ELEMENTS.size;
         }
         
-        // --- DRAG LOGIC (Fixed and Consolidated) ---
+        // --- DRAG LOGIC (Timing Fix Applied) ---
 
         function startDrag(e, targetElement) {
             activeElement = targetElement;
@@ -325,21 +303,27 @@
             if (!activeElement) return;
             e.preventDefault();
 
-            // Calculate new position relative to the workspace's top-left corner
             let newLeft = e.clientX - xOffset - workspaceRect.left;
             let newTop = e.clientY - yOffset - workspaceRect.top;
 
-            // Simple boundary limits
             newLeft = Math.max(0, newLeft);
             newTop = Math.max(0, newTop);
 
             activeElement.style.left = `${newLeft}px`;
             activeElement.style.top = `${newTop}px`;
+            
+            // FIX: Store the final position with every move
+            finalX = newLeft;
+            finalY = newTop;
         }
 
         function dragEnd(e) {
             if (!activeElement) return;
 
+            // FIX: Ensure the final position is explicitly set/rendered 
+            activeElement.style.left = `${finalX}px`;
+            activeElement.style.top = `${finalY}px`;
+            
             activeElement.style.zIndex = 10;
             activeElement.style.cursor = 'grab';
             
@@ -352,7 +336,6 @@
                 const activeRect = activeElement.getBoundingClientRect();
                 const targetRect = targetElement.getBoundingClientRect();
                 
-                // Center the new element between the two combined elements
                 const newX = ((activeRect.left + targetRect.left) / 2) - workspaceRect.left;
                 const newY = ((activeRect.top + targetRect.top) / 2) - workspaceRect.top;
 
@@ -365,10 +348,8 @@
         }
 
         function generalMouseDown(e) {
-            // Always update workspace dimensions at the start of an interaction
             workspaceRect = workspaceEl.getBoundingClientRect();
 
-            // 1. Sidebar Item: Clone and Drag
             if (e.target.classList.contains('sidebar-element-item')) {
                 e.preventDefault(); 
                 
@@ -380,10 +361,8 @@
 
                 const card = createCardEl(name, x, y);
                 
-                // Initiate drag on the new card
                 return startDrag(e, card); 
 
-            // 2. Workspace Card: Drag existing
             } else if (e.target.classList.contains('element-card')) {
                 e.preventDefault();
                 return startDrag(e, e.target);
@@ -405,7 +384,6 @@
             const discoveredElements = new Set(Object.values(RECIPE_CACHE));
             ALL_ELEMENTS = new Set([...STARTING_ELEMENTS, ...discoveredElements]);
 
-            // Set up the single entry point for all drag operations on the document
             document.addEventListener('mousedown', generalMouseDown);
             
             renderElements();
