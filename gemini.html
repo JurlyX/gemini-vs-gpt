@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Ultimate Puter.js Infinite Craft (COMBINATION FIXED)</title>
+    <title>Ultimate Puter.js Infinite Craft (SUCCESS FIXED)</title>
     <script src="https://js.puter.com/v2/"></script>
     <style>
-        /* (CSS is the same for layout consistency) */
+        /* (CSS and HTML structure are stable and remain the same) */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
@@ -149,18 +149,19 @@
 
         /**
          * The AI "Fusion Engine" logic using Puter.js.
-         * FIX: Increased temperature to encourage more successful, creative combinations.
+         * FIX: Maxed temperature and added explicit instruction for core combinations.
          */
         async function runAICombination(first, second) {
             notify(`Combining ${first} + ${second}... AI is thinking! 🧠`);
 
-            const prompt = `You are the engine behind a game like Infinite Craft. Combine two words/idioms into a new word. The output must be a single word or short phrase that is semantically relevant. **DO NOT** include any commentary, quotes, punctuation, or extra words. Only respond with the resulting element name and nothing else. The inputs are "${first}" and "${second}".`;
+            // FIX: Added strong emphasis on providing a result
+            const prompt = `You are the engine behind a game like Infinite Craft. Combine two words/idioms into a new word. The output must be a single word or short phrase that is semantically relevant. **A RESULT IS MANDATORY.** For basic combinations like Earth + Fire, return a common result (e.g., Lava). **DO NOT** include any commentary, quotes, punctuation, or extra words. Only respond with the resulting element name and nothing else. The inputs are "${first}" and "${second}".`;
 
             try {
                 const response = await puter.ai.chat(prompt, {
                     model: 'gpt-5-nano',
-                    // FIX: Increased temperature to 0.7 for more creative results
-                    temperature: 0.7, 
+                    // FIX: Maxed temperature for highest creativity/success rate
+                    temperature: 0.9, 
                     max_tokens: 20,
                 });
 
@@ -308,7 +309,6 @@
             activeElement.style.left = `${newLeft}px`;
             activeElement.style.top = `${newTop}px`;
             
-            // Store the final position with every move
             finalX = newLeft;
             finalY = newTop;
         }
@@ -316,7 +316,6 @@
         function dragEnd(e) {
             if (!activeElement) return;
 
-            // Ensure the final position is explicitly set/rendered 
             activeElement.style.left = `${finalX}px`;
             activeElement.style.top = `${finalY}px`;
             
