@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Ultimate Puter.js Infinite Craft (FIXED)</title>
+    <title>Ultimate Puter.js Infinite Craft (DRAG FIXED)</title>
     <script src="https://js.puter.com/v2/"></script>
     <style>
         /* --- General Layout and Reset --- */
@@ -22,7 +22,7 @@
             font-size: 1.5em;
             color: #1a1a1a;
             user-select: none;
-            z-index: 50; /* Ensure title is above cards */
+            z-index: 50; 
         }
 
         /* --- Sidebar (Inventory) --- */
@@ -53,7 +53,7 @@
             border-radius: 6px;
             background-color: #f7f7f7;
             border: 1px solid #ddd;
-            cursor: pointer; /* Use pointer to indicate clicking/dragging */
+            cursor: grab; /* Set to grab to indicate drag functionality */
             font-size: 1em;
             font-weight: 600;
             transition: background-color 0.1s;
@@ -134,7 +134,7 @@
 
     <script>
         // --- Core Game Constants & Puter.js Setup ---
-        const CACHE_KEY = 'infinite_craft_recipes_ultimate_fixed';
+        const CACHE_KEY = 'infinite_craft_recipes_ultimate_fixed_final';
         const STARTING_ELEMENTS = ['Earth', 'Fire', 'Water', 'Wind'];
         let ALL_ELEMENTS = new Set(STARTING_ELEMENTS);
         let RECIPE_CACHE = {}; 
@@ -144,14 +144,14 @@
         const workspaceEl = document.getElementById('workspace');
         const notificationEl = document.getElementById('notification');
         const countEl = document.getElementById('count');
-        const WORKSPACE_OFFSET_X = 270; // Hardcoded sidebar width + padding
 
         // Drag State
         let activeElement = null;
         let xOffset = 0, yOffset = 0; // Offset from mouse to element corner
         let workspaceRect; // Cached workspace dimensions
 
-        // --- Utility Functions ---
+        // --- Utility Functions (Omitted for brevity, assumed functional from previous steps) ---
+        // (notify, runAICombination, craftElements, getOverlapTarget)
 
         function notify(message, isDiscovery = false) {
             notificationEl.textContent = message;
@@ -162,27 +162,19 @@
             }, 3000);
         }
 
-        /**
-         * Puter.js AI Logic: Calls the LLM for combination.
-         */
         async function runAICombination(first, second) {
             notify(`Combining ${first} + ${second}... AI is thinking! 🧠`);
-
             const prompt = `You are the engine behind a game like Infinite Craft. Your job is to combine two words/idioms into a new one. The combinations should look for something that is semantically "in between" the two inputs. For instance "fire" + "water" would yield "steam". Just respond with only the output word, no chit-chat, no thoughts, just the first word that comes to your mind and stop. The inputs are "${first}" and "${second}".`;
-
             try {
                 const response = await puter.ai.chat(prompt, {
                     model: 'gpt-5-nano',
                     temperature: 0.2, 
                     max_tokens: 5,
                 });
-
                 let newElement = response.text.trim().replace(/[."]/g, '');
-
                 if (!newElement || newElement.toLowerCase().includes('sorry') || newElement.length > 30) {
                     return 'Nothing';
                 }
-
                 return newElement;
             } catch (error) {
                 console.error("AI Error:", error);
@@ -191,9 +183,6 @@
             }
         }
 
-        /**
-         * Core combination function.
-         */
         async function craftElements(e1, e2, newX, newY, el1, el2) {
             const [first, second] = [e1, e2].sort();
             const pairKey = `${first}|${second}`;
@@ -211,27 +200,20 @@
 
             if (newElement !== 'Nothing' && newElement !== 'ERROR') {
                 RECIPE_CACHE[pairKey] = newElement;
-                
                 const isNewDiscovery = !ALL_ELEMENTS.has(newElement);
                 if (isNewDiscovery) {
                     ALL_ELEMENTS.add(newElement);
                     await puter.kv.set(CACHE_KEY, RECIPE_CACHE);
                     renderElements(); 
                 }
-                
                 notify(`🚀 First Discovery! ${first} + ${second} = ${newElement}`, isNewDiscovery);
-                
                 el1.remove();
                 el2.remove();
                 createCardEl(newElement, newX, newY, true);
-
             } else {
                 notify(`❌ Nothing combined with ${first} + ${second}.`, false);
-                // On failure, we leave the dropped element where it landed.
             }
         }
-
-        // --- Drag and Drop Logic ---
 
         function getOverlapTarget(droppedElement) {
             const droppedRect = droppedElement.getBoundingClientRect();
@@ -241,8 +223,6 @@
                 if (el === droppedElement) continue;
 
                 const targetRect = el.getBoundingClientRect();
-
-                // Collision Check (Intersection)
                 const isOverlapping = !(
                     droppedRect.right < targetRect.left || 
                     droppedRect.left > targetRect.right || 
@@ -257,92 +237,6 @@
             return null;
         }
 
-        // --- Event Handlers ---
-
-        function handleSidebarClick(e) {
-            // Only clone and drag if the target is a sidebar element
-            if (!e.target.classList.contains('sidebar-element-item')) return;
-
-            // 1. Create a workspace card near the mouse pointer
-            const name = e.target.dataset.element;
-            const x = e.clientX - WORKSPACE_OFFSET_X;
-            const y = e.clientY;
-            const card = createCardEl(name, x, y);
-            
-            // 2. Start dragging the newly created card
-            dragStart({
-                target: card,
-                clientX: e.clientX,
-                clientY: e.clientY
-            });
-        }
-        
-        function dragStart(e) {
-            if (!e.target.classList.contains('element-card')) return;
-            e.preventDefault();
-
-            activeElement = e.target;
-            
-            // Calculate offset relative to the card's top-left corner
-            const rect = activeElement.getBoundingClientRect();
-            xOffset = e.clientX - rect.left; 
-            yOffset = e.clientY - rect.top;
-
-            // Cache workspace rectangle for boundary checks
-            workspaceRect = workspaceEl.getBoundingClientRect();
-
-            activeElement.style.zIndex = 20; 
-            
-            // Set listeners globally
-            document.addEventListener('mousemove', drag);
-            document.addEventListener('mouseup', dragEnd);
-        }
-
-        function drag(e) {
-            if (!activeElement) return;
-
-            // Calculate new position based on mouse and offset
-            let newLeft = e.clientX - xOffset - workspaceRect.left;
-            let newTop = e.clientY - yOffset - workspaceRect.top;
-
-            // Apply boundaries (optional, but good practice)
-            newLeft = Math.max(0, Math.min(newLeft, workspaceRect.width - activeElement.offsetWidth));
-            newTop = Math.max(0, Math.min(newTop, workspaceRect.height - activeElement.offsetHeight));
-
-            activeElement.style.left = `${newLeft}px`;
-            activeElement.style.top = `${newTop}px`;
-        }
-
-        function dragEnd(e) {
-            if (!activeElement) return;
-
-            activeElement.style.zIndex = 10;
-            
-            const targetElement = getOverlapTarget(activeElement);
-            
-            if (targetElement) {
-                const e1 = activeElement.dataset.element;
-                const e2 = targetElement.dataset.element;
-
-                // Calculate the center point for the resulting element
-                const activeRect = activeElement.getBoundingClientRect();
-                const targetRect = targetElement.getBoundingClientRect();
-                
-                const newX = ((activeRect.left + targetRect.left) / 2) - workspaceRect.left;
-                const newY = ((activeRect.top + targetRect.top) / 2) - workspaceRect.top;
-
-                // Perform combination (elements are removed inside craftElements on success)
-                craftElements(e1, e2, newX, newY, activeElement, targetElement);
-            } 
-            
-            // Cleanup drag state
-            activeElement = null;
-            document.removeEventListener('mousemove', drag);
-            document.removeEventListener('mouseup', dragEnd);
-        }
-        
-        // --- Element Creation ---
-        
         function createSidebarEl(elementName) {
             const el = document.createElement('div');
             el.className = 'sidebar-element-item';
@@ -357,7 +251,6 @@
             el.textContent = elementName;
             el.dataset.element = elementName;
             
-            // Ensure positioning is relative to the workspace
             el.style.left = `${x}px`;
             el.style.top = `${y}px`;
             
@@ -378,11 +271,99 @@
             });
             countEl.textContent = ALL_ELEMENTS.size;
         }
+        
+        // --- FIXED DRAG LOGIC ---
 
+        function startDrag(e, targetElement) {
+            activeElement = targetElement;
+            
+            // Calculate offset for smooth dragging
+            const rect = activeElement.getBoundingClientRect();
+            xOffset = e.clientX - rect.left; 
+            yOffset = e.clientY - rect.top;
+
+            activeElement.style.zIndex = 20;
+            activeElement.style.cursor = 'grabbing';
+            
+            // Set global listeners on the document to capture movement outside the element
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', dragEnd);
+        }
+
+        function drag(e) {
+            if (!activeElement) return;
+            e.preventDefault(); // Crucial to prevent default selection/dragging behavior
+
+            // Calculate new position relative to the workspace's top-left corner
+            let newLeft = e.clientX - xOffset - workspaceRect.left;
+            let newTop = e.clientY - yOffset - workspaceRect.top;
+
+            // Apply boundaries (optional, but prevents elements from disappearing off screen)
+            newLeft = Math.max(0, Math.min(newLeft, workspaceRect.width - activeElement.offsetWidth));
+            newTop = Math.max(0, Math.min(newTop, workspaceRect.height - activeElement.offsetHeight));
+
+            activeElement.style.left = `${newLeft}px`;
+            activeElement.style.top = `${newTop}px`;
+        }
+
+        function dragEnd(e) {
+            if (!activeElement) return;
+
+            activeElement.style.zIndex = 10;
+            activeElement.style.cursor = 'grab'; // Restore default cursor
+            
+            const targetElement = getOverlapTarget(activeElement);
+            
+            if (targetElement) {
+                const e1 = activeElement.dataset.element;
+                const e2 = targetElement.dataset.element;
+
+                // Calculate the center point for the resulting element
+                const activeRect = activeElement.getBoundingClientRect();
+                const targetRect = targetElement.getBoundingClientRect();
+                
+                const newX = ((activeRect.left + targetRect.left) / 2) - workspaceRect.left;
+                const newY = ((activeRect.top + targetRect.top) / 2) - workspaceRect.top;
+
+                // Elements are removed inside craftElements on success
+                craftElements(e1, e2, newX, newY, activeElement, targetElement);
+            } 
+            
+            // Cleanup drag state
+            activeElement = null;
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', dragEnd);
+        }
+
+        function generalMouseDown(e) {
+            // Cache workspace dimensions once per interaction
+            workspaceRect = workspaceEl.getBoundingClientRect();
+
+            // 1. Sidebar Item: Clone and Drag
+            if (e.target.classList.contains('sidebar-element-item')) {
+                e.preventDefault(); 
+                
+                const name = e.target.dataset.element;
+                
+                // Calculate position relative to workspace top-left
+                const x = e.clientX - workspaceRect.left;
+                const y = e.clientY - workspaceRect.top;
+
+                const card = createCardEl(name, x, y);
+                
+                // Initiate drag on the new card
+                return startDrag(e, card); 
+
+            // 2. Workspace Card: Drag existing
+            } else if (e.target.classList.contains('element-card')) {
+                e.preventDefault();
+                return startDrag(e, e.target);
+            }
+        }
+        
         // --- Initialization ---
 
         async function initializeGame() {
-            // Load the recipe cache from Puter.js Key-Value store
             try {
                 const cachedRecipes = await puter.kv.get(CACHE_KEY);
                 if (cachedRecipes) {
@@ -392,13 +373,11 @@
                 console.warn("Could not load cache, starting fresh.");
             }
 
-            // Build the list of all known elements
             const discoveredElements = new Set(Object.values(RECIPE_CACHE));
             ALL_ELEMENTS = new Set([...STARTING_ELEMENTS, ...discoveredElements]);
 
-            // Set up all event listeners
-            document.addEventListener('mousedown', dragStart); // For workspace cards
-            sidebar.addEventListener('mousedown', handleSidebarClick); // For creating new cards
+            // Set up the single entry point for all drag operations on the document
+            document.addEventListener('mousedown', generalMouseDown);
             
             // Initial render
             renderElements();
@@ -406,7 +385,6 @@
             notify(`Ready! You have discovered ${ALL_ELEMENTS.size} elements.`, true);
         }
 
-        // Start the game
         initializeGame();
     </script>
 </body>
