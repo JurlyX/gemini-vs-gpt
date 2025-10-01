@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Infinite Craft Clone - V3: FULL REWRITE & FIXES</title>
+    <title>Infinite Craft Clone - V4: PURE MOUSE DRAG FIX</title>
     <script src="https://js.puter.com/v2/"></script>
     <style>
-        /* --- Styles for a near-perfect clone experience --- */
+        /* --- Styles (Cleaned and Optimized) --- */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
@@ -55,9 +55,7 @@
             font-size: 1em;
             font-weight: 600;
             transition: background-color 0.1s;
-            /* Enable native HTML5 drag for sidebar items */
             user-select: none; 
-            -webkit-user-drag: element;
         }
         .sidebar-element-item:hover {
             background-color: #e0e0e0;
@@ -67,10 +65,8 @@
             position: relative;
             background-color: #f7f7f7;
             overflow: hidden;
-        }
-        /* The workspace is the drop target */
-        #workspace.drag-over {
-            box-shadow: inset 0 0 10px rgba(0, 123, 255, 0.5);
+            /* Allow selection/drag on the workspace */
+            touch-action: none;
         }
 
         .element-card {
@@ -136,7 +132,7 @@
 
     <script>
         // --- Core Game Constants & Puter.js Setup ---
-        const CACHE_KEY = 'infinite_craft_recipes_v3_final';
+        const CACHE_KEY = 'infinite_craft_recipes_v4_final';
         const STARTING_ELEMENTS = ['Earth', 'Fire', 'Water', 'Wind'];
         let ALL_ELEMENTS = new Set(STARTING_ELEMENTS);
         let RECIPE_CACHE = {}; 
@@ -173,7 +169,6 @@
         async function runAICombination(first, second) {
             notify(`Combining ${first} + ${second}... AI is thinking! 🧠`);
 
-            // Highly constrained prompt demanding a single JSON object.
             const prompt = `You are the engine behind a game like Infinite Craft. Combine "${first}" and "${second}" into a new word or phrase that is semantically relevant. **A result is mandatory.** Respond ONLY with a single JSON object in the format: {"result": "Element Name"}. DO NOT include any other text, quotes, or markdown fences.`;
 
             try {
@@ -256,7 +251,7 @@
 
                 const targetRect = el.getBoundingClientRect();
 
-                // Standard collision detection logic
+                // Collision detection logic
                 const isOverlapping = !(
                     droppedRect.right < targetRect.left || 
                     droppedRect.left > targetRect.right || 
@@ -276,15 +271,9 @@
             el.className = 'sidebar-element-item';
             el.textContent = elementName;
             el.dataset.element = elementName;
-            el.setAttribute('draggable', 'true'); // Required for native drag API
             
-            // Set up native dragstart event for sidebar items
-            el.addEventListener('dragstart', (e) => {
-                e.dataTransfer.setData('text/plain', elementName);
-                e.dataTransfer.effectAllowed = 'move';
-                // Use a placeholder ID for drag tracking (distinguishing it from workspace cards)
-                e.target.id = 'temp-drag-source'; 
-            });
+            // Sidebar elements use mousedown to spawn a card on the workspace
+            el.addEventListener('mousedown', generalMouseDown);
             return el;
         }
 
@@ -302,8 +291,8 @@
                 setTimeout(() => el.classList.remove('new-discovery'), 2000);
             }
 
-            // Set up MOUSE events for the workspace cards (for custom free dragging)
-            el.addEventListener('mousedown', (e) => startDrag(e, el));
+            // Workspace cards use mousedown to initiate a drag
+            el.addEventListener('mousedown', generalMouseDown);
             workspaceEl.appendChild(el);
             return el;
         }
@@ -317,9 +306,8 @@
             countEl.textContent = ALL_ELEMENTS.size;
         }
         
-        // --- DRAG LOGIC (Custom for Cards, Native for Sidebar) ---
+        // --- DRAG LOGIC (Unified Mouse Events) ---
 
-        // Custom drag for elements already in the workspace
         function startDrag(e, targetElement) {
             activeElement = targetElement;
             workspaceRect = workspaceEl.getBoundingClientRect();
@@ -331,6 +319,7 @@
             activeElement.style.zIndex = 50; 
             activeElement.style.cursor = 'grabbing';
             
+            // Attach global listeners for fluid dragging
             document.addEventListener('mousemove', drag);
             document.addEventListener('mouseup', dragEnd);
         }
@@ -339,6 +328,7 @@
             if (!activeElement) return;
             e.preventDefault();
 
+            // Calculate new position relative to the workspace
             let newLeft = e.clientX - xOffset - workspaceRect.left;
             let newTop = e.clientY - yOffset - workspaceRect.top;
 
@@ -352,6 +342,10 @@
         function dragEnd(e) {
             if (!activeElement) return;
 
+            // Remove global listeners
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', dragEnd);
+            
             activeElement.style.left = `${finalX}px`;
             activeElement.style.top = `${finalY}px`;
             
@@ -367,47 +361,40 @@
                 const activeRect = activeElement.getBoundingClientRect();
                 const targetRect = targetElement.getBoundingClientRect();
                 
+                // Calculate the midpoint for the new combined element
                 const newX = ((activeRect.left + targetRect.left) / 2) - workspaceRect.left;
                 const newY = ((activeRect.top + targetRect.top) / 2) - workspaceRect.top;
 
-                // Crafting occurs here!
+                // Execute the core logic
                 craftElements(e1, e2, newX, newY, activeElement, targetElement);
             } 
             
             activeElement = null;
-            document.removeEventListener('mousemove', drag);
-            document.removeEventListener('mouseup', dragEnd);
         }
-        
-        // --- NATIVE DRAG AND DROP API HANDLERS (for Sidebar to Workspace) ---
 
-        workspaceEl.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'copy'; 
-            workspaceEl.classList.add('drag-over');
-        });
+        function generalMouseDown(e) {
+            workspaceRect = workspaceEl.getBoundingClientRect();
+            e.preventDefault(); // Prevent default browser drag behaviour
 
-        workspaceEl.addEventListener('dragleave', (e) => {
-            workspaceEl.classList.remove('drag-over');
-        });
-
-        workspaceEl.addEventListener('drop', (e) => {
-            e.preventDefault();
-            workspaceEl.classList.remove('drag-over');
-
-            const draggedName = e.dataTransfer.getData('text/plain');
-            
-            // Check if drop originated from the sidebar or another card
-            if (draggedName) {
-                const x = e.clientX - workspaceEl.getBoundingClientRect().left - 20; 
-                const y = e.clientY - workspaceEl.getBoundingClientRect().top - 20;
+            // 1. If clicking an element in the sidebar (Inventory)
+            if (e.target.classList.contains('sidebar-element-item')) {
                 
-                const card = createCardEl(draggedName, x, y);
+                const name = e.target.dataset.element;
+                
+                // Position the new card near the mouse pointer
+                const x = e.clientX - workspaceRect.left - 20; 
+                const y = e.clientY - workspaceRect.top - 20;
 
-                // Instantly start the custom mouse drag to continue dragging the new element
-                startDrag({clientX: e.clientX, clientY: e.clientY}, card);
+                const card = createCardEl(name, x, y);
+                
+                // Immediately start dragging the newly created card
+                return startDrag(e, card); 
+
+            // 2. If clicking an element on the workspace
+            } else if (e.target.classList.contains('element-card')) {
+                return startDrag(e, e.target);
             }
-        });
+        }
         
         // --- Initialization ---
 
@@ -422,14 +409,12 @@
                 console.warn("Could not load cache, starting fresh.");
             }
 
-            // Rebuild the ALL_ELEMENTS set from starting elements + cached results
             const discoveredElements = new Set(Object.values(RECIPE_CACHE));
             ALL_ELEMENTS = new Set([...STARTING_ELEMENTS, ...discoveredElements]);
 
-            // Set the initial size of the workspace for drag calculations
-            workspaceRect = workspaceEl.getBoundingClientRect();
+            // Workspace listener for existing cards is attached in createCardEl.
+            // Sidebar listener is attached in createSidebarEl.
             
-            // Render the initial list
             renderElements();
 
             notify(`Ready! Found ${ALL_ELEMENTS.size} unique elements.`, true);
