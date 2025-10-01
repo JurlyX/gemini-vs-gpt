@@ -2,118 +2,141 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Infinite Craft Clone - V4: PURE MOUSE DRAG FIX</title>
+    <title>Infinite Craft Clone - V5: NEAL.FUN REDESIGN</title>
     <script src="https://js.puter.com/v2/"></script>
     <style>
-        /* --- Styles (Cleaned and Optimized) --- */
+        /* --- NEAL.FUN INSPIRED STYLES --- */
+        :root {
+            --sidebar-width: 300px;
+            --main-bg: #f5f5f5;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --shadow-light: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-heavy: 0 8px 25px rgba(0,0,0,0.2);
+            --primary-blue: #007aff; /* iOS Blue for First Discovery */
+        }
+        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             margin: 0;
             padding: 0;
             display: flex;
-            background-color: #f7f7f7;
-            color: #333;
+            background-color: var(--main-bg);
+            color: var(--text-color);
             overflow: hidden; 
         }
+
+        /* --- HEADER & SIDEBAR --- */
         h1 {
-            position: absolute;
-            top: 10px;
-            left: 280px;
-            font-size: 1.5em;
-            color: #1a1a1a;
+            position: fixed; 
+            top: 15px;
+            left: calc(var(--sidebar-width) + 20px);
+            font-size: 1.8em;
+            font-weight: 700;
+            color: #1c1c1c;
             user-select: none;
             z-index: 50; 
         }
+
         #sidebar {
-            width: 250px;
-            background-color: #fff;
-            padding: 20px 10px;
-            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+            width: var(--sidebar-width);
+            background-color: var(--card-bg);
+            padding: 15px 20px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
             overflow-y: auto;
             height: 100vh;
             box-sizing: border-box;
             user-select: none;
+            flex-shrink: 0;
         }
         #sidebar h2 {
             margin-top: 0;
+            margin-bottom: 20px;
             color: #1a1a1a;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #e0e0e0;
-            font-size: 1.2em;
+            font-size: 1.5em;
+            font-weight: 600;
         }
         #inventory-list {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
         }
         .sidebar-element-item {
-            padding: 10px;
-            border-radius: 6px;
-            background-color: #f0f0f0;
-            border: 1px solid #ddd;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background-color: var(--main-bg);
+            border: 1px solid #e0e0e0;
             cursor: grab;
-            font-size: 1em;
-            font-weight: 600;
-            transition: background-color 0.1s;
-            user-select: none; 
+            font-size: 1.1em;
+            font-weight: 500;
+            transition: background-color 0.15s, transform 0.05s;
         }
         .sidebar-element-item:hover {
-            background-color: #e0e0e0;
+            background-color: #e8e8e8;
+            transform: scale(1.01);
         }
+
+        /* --- WORKSPACE --- */
         #workspace {
             flex-grow: 1;
             position: relative;
-            background-color: #f7f7f7;
+            background-color: var(--main-bg);
             overflow: hidden;
-            /* Allow selection/drag on the workspace */
-            touch-action: none;
         }
 
         .element-card {
             position: absolute;
-            padding: 12px 18px;
-            border-radius: 8px;
-            background-color: #fff;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); 
+            padding: 12px 20px;
+            border-radius: 10px;
+            background-color: var(--card-bg);
+            box-shadow: var(--shadow-light);
             cursor: grab;
-            font-size: 1.2em;
-            font-weight: 700;
-            border: 1px solid #ccc;
+            font-size: 1.3em;
+            font-weight: 600;
+            border: 1px solid #dddddd;
             user-select: none;
             z-index: 10;
-            transition: box-shadow 0.1s, transform 0.1s;
+            transition: box-shadow 0.1s, transform 0.1s, background-color 0.1s;
+            white-space: nowrap; 
         }
         .element-card:active {
             cursor: grabbing;
-            transform: scale(1.05); 
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
-            z-index: 50; 
+            transform: scale(1.02); 
+            box-shadow: var(--shadow-heavy);
+            z-index: 1000; 
         }
+        
+        /* --- EFFECTS --- */
         .new-discovery {
-            animation: fadeInScale 1s ease-out;
-            border-color: #007bff;
+            animation: bounceIn 1s ease-out;
+            border-color: var(--primary-blue);
             box-shadow: 0 0 15px rgba(0, 123, 255, 0.7);
         }
-        @keyframes fadeInScale {
+        @keyframes bounceIn {
             0% { transform: scale(0.5); opacity: 0; }
-            50% { transform: scale(1.1); opacity: 1; }
+            70% { transform: scale(1.1); opacity: 1; }
             100% { transform: scale(1); opacity: 1; }
         }
+        
+        /* Notification style */
         #notification {
-            position: absolute;
+            position: fixed;
             top: 20px;
             right: 20px;
             padding: 10px 20px;
             background-color: #333;
             color: white;
-            border-radius: 6px;
-            font-weight: bold;
+            border-radius: 8px;
+            font-weight: 500;
             opacity: 0;
             transition: opacity 0.3s, background-color 0.3s;
-            z-index: 100;
+            z-index: 10000; 
         }
         .visible {
             opacity: 1 !important;
+        }
+        .discovery-notify {
+            background-color: var(--primary-blue) !important;
         }
     </style>
 </head>
@@ -125,14 +148,14 @@
             </div>
     </div>
 
-    <h1>Puter.js Infinite Craft Clone</h1>
+    <h1>Infinite Craft Clone</h1>
     <div id="workspace">
         <div id="notification"></div>
     </div>
 
     <script>
         // --- Core Game Constants & Puter.js Setup ---
-        const CACHE_KEY = 'infinite_craft_recipes_v4_final';
+        const CACHE_KEY = 'infinite_craft_recipes_v5_redesign';
         const STARTING_ELEMENTS = ['Earth', 'Fire', 'Water', 'Wind'];
         let ALL_ELEMENTS = new Set(STARTING_ELEMENTS);
         let RECIPE_CACHE = {}; 
@@ -142,7 +165,7 @@
         const notificationEl = document.getElementById('notification');
         const countEl = document.getElementById('count');
 
-        let activeElement = null;
+        let activeElement = null; 
         let xOffset = 0, yOffset = 0; 
         let workspaceRect; 
         let finalX = 0, finalY = 0; 
@@ -157,28 +180,33 @@
             clearTimeout(dragTimeout);
             notificationEl.textContent = message;
             notificationEl.className = 'visible';
-            notificationEl.style.backgroundColor = isDiscovery ? '#28a745' : '#333';
+            notificationEl.classList.toggle('discovery-notify', isDiscovery);
+            
             dragTimeout = setTimeout(() => {
                 notificationEl.className = '';
             }, 3000);
         }
 
         /**
-         * AI Fusion Engine - Forces Structured JSON Output for maximum reliability.
+         * AI Fusion Engine using puter.ai.chat()
+         * Forces Structured JSON Output for maximum reliability.
          */
         async function runAICombination(first, second) {
             notify(`Combining ${first} + ${second}... AI is thinking! 🧠`);
 
-            const prompt = `You are the engine behind a game like Infinite Craft. Combine "${first}" and "${second}" into a new word or phrase that is semantically relevant. **A result is mandatory.** Respond ONLY with a single JSON object in the format: {"result": "Element Name"}. DO NOT include any other text, quotes, or markdown fences.`;
+            // Strict prompt to enforce JSON output for a clean element name.
+            const prompt = `You are the engine behind a game like Infinite Craft. Combine "${first}" and "${second}" into a new word or phrase that is semantically relevant. A result is mandatory. Respond ONLY with a single JSON object in the format: {"result": "Element Name"}. DO NOT include any other text, quotes, or markdown fences.`;
 
             try {
+                // *** PUTER.JS AI CALL ***
                 const response = await puter.ai.chat(prompt, {
-                    model: 'gpt-5-nano', 
+                    model: 'gpt-5-nano', // A fast, capable model
                     temperature: 0.9, 
                     max_tokens: 50, 
                 });
                 
                 let text = response.text.trim();
+                // Clean up any markdown fences if the model still includes them
                 text = text.replace(/```json|```|json/gi, '').trim(); 
                 
                 const data = JSON.parse(text);
@@ -186,6 +214,7 @@
 
                 if (newElement && typeof newElement === 'string') {
                     newElement = newElement.trim();
+                    // Basic capitalization (as is common in the game)
                     if (newElement.length > 0) {
                          newElement = newElement.charAt(0).toUpperCase() + newElement.slice(1);
                     }
@@ -203,7 +232,7 @@
         }
 
         /**
-         * The core crafting logic. Checks cache, calls AI, caches result.
+         * The core crafting logic. Checks cache, calls AI, caches result (using puter.kv).
          */
         async function craftElements(e1, e2, newX, newY, el1, el2) {
             const [first, second] = [e1, e2].sort();
@@ -217,8 +246,10 @@
 
             if (newElement && newElement !== 'Nothing' && newElement !== 'ERROR') {
                 
+                // Cache and save if this is a truly new combination
                 if (!RECIPE_CACHE[pairKey]) {
                      RECIPE_CACHE[pairKey] = newElement;
+                     // *** PUTER.JS KV CALL ***
                      await puter.kv.set(CACHE_KEY, RECIPE_CACHE);
                 }
 
@@ -228,19 +259,19 @@
                     renderElements(); 
                 }
                 
-                notify(`🚀 Discovery! ${first} + ${second} = ${newElement}`, isNewDiscovery);
+                notify(`🚀 ${newElement}! (${first} + ${second})`, isNewDiscovery);
                 
                 el1.remove();
                 el2.remove();
                 createCardEl(newElement, newX, newY, true);
 
             } else {
-                notify(`❌ Nothing combined with ${first} + ${second}.`, false);
+                notify(`❌ Nothing happens.`, false);
             }
         }
 
         /**
-         * Checks if the dropped element overlaps with any other element card.
+         * Checks if the active element overlaps with another card on drop.
          */
         function getOverlapTarget(droppedElement) {
             const droppedRect = droppedElement.getBoundingClientRect();
@@ -251,7 +282,7 @@
 
                 const targetRect = el.getBoundingClientRect();
 
-                // Collision detection logic
+                // Standard collision detection logic
                 const isOverlapping = !(
                     droppedRect.right < targetRect.left || 
                     droppedRect.left > targetRect.right || 
@@ -271,8 +302,6 @@
             el.className = 'sidebar-element-item';
             el.textContent = elementName;
             el.dataset.element = elementName;
-            
-            // Sidebar elements use mousedown to spawn a card on the workspace
             el.addEventListener('mousedown', generalMouseDown);
             return el;
         }
@@ -291,7 +320,6 @@
                 setTimeout(() => el.classList.remove('new-discovery'), 2000);
             }
 
-            // Workspace cards use mousedown to initiate a drag
             el.addEventListener('mousedown', generalMouseDown);
             workspaceEl.appendChild(el);
             return el;
@@ -316,10 +344,9 @@
             xOffset = e.clientX - rect.left; 
             yOffset = e.clientY - rect.top;
 
-            activeElement.style.zIndex = 50; 
+            activeElement.style.zIndex = 1000; 
             activeElement.style.cursor = 'grabbing';
             
-            // Attach global listeners for fluid dragging
             document.addEventListener('mousemove', drag);
             document.addEventListener('mouseup', dragEnd);
         }
@@ -328,7 +355,6 @@
             if (!activeElement) return;
             e.preventDefault();
 
-            // Calculate new position relative to the workspace
             let newLeft = e.clientX - xOffset - workspaceRect.left;
             let newTop = e.clientY - yOffset - workspaceRect.top;
 
@@ -342,7 +368,6 @@
         function dragEnd(e) {
             if (!activeElement) return;
 
-            // Remove global listeners
             document.removeEventListener('mousemove', drag);
             document.removeEventListener('mouseup', dragEnd);
             
@@ -361,36 +386,38 @@
                 const activeRect = activeElement.getBoundingClientRect();
                 const targetRect = targetElement.getBoundingClientRect();
                 
-                // Calculate the midpoint for the new combined element
-                const newX = ((activeRect.left + targetRect.left) / 2) - workspaceRect.left;
-                const newY = ((activeRect.top + targetRect.top) / 2) - workspaceRect.top;
+                // Calculate the midpoint for the resulting card
+                const newX = ((activeRect.left + targetRect.left + targetRect.width / 2) / 2) - workspaceRect.left - (activeRect.width / 2);
+                const newY = ((activeRect.top + targetRect.top + targetRect.height / 2) / 2) - workspaceRect.top - (activeRect.height / 2);
 
-                // Execute the core logic
                 craftElements(e1, e2, newX, newY, activeElement, targetElement);
             } 
             
             activeElement = null;
         }
 
+        /**
+         * Unified Mousedown handler for sidebar and workspace.
+         */
         function generalMouseDown(e) {
-            workspaceRect = workspaceEl.getBoundingClientRect();
-            e.preventDefault(); // Prevent default browser drag behaviour
+            e.preventDefault(); 
 
-            // 1. If clicking an element in the sidebar (Inventory)
+            workspaceRect = workspaceEl.getBoundingClientRect(); 
+
+            // 1. If source is from the sidebar (clone element)
             if (e.target.classList.contains('sidebar-element-item')) {
                 
                 const name = e.target.dataset.element;
                 
-                // Position the new card near the mouse pointer
                 const x = e.clientX - workspaceRect.left - 20; 
                 const y = e.clientY - workspaceRect.top - 20;
 
                 const card = createCardEl(name, x, y);
                 
-                // Immediately start dragging the newly created card
+                // Start drag immediately on the new card
                 return startDrag(e, card); 
 
-            // 2. If clicking an element on the workspace
+            // 2. If source is an existing card on the workspace
             } else if (e.target.classList.contains('element-card')) {
                 return startDrag(e, e.target);
             }
@@ -400,7 +427,7 @@
 
         async function initializeGame() {
             try {
-                // Load cached recipes from Puter.js KV Store
+                // *** PUTER.JS KV LOAD ***
                 const cachedRecipes = await puter.kv.get(CACHE_KEY);
                 if (cachedRecipes) {
                     RECIPE_CACHE = cachedRecipes;
@@ -412,12 +439,12 @@
             const discoveredElements = new Set(Object.values(RECIPE_CACHE));
             ALL_ELEMENTS = new Set([...STARTING_ELEMENTS, ...discoveredElements]);
 
-            // Workspace listener for existing cards is attached in createCardEl.
-            // Sidebar listener is attached in createSidebarEl.
+            // Add the main mouse listener for both cloning and dragging
+            document.addEventListener('mousedown', generalMouseDown);
             
             renderElements();
 
-            notify(`Ready! Found ${ALL_ELEMENTS.size} unique elements.`, true);
+            notify(`Welcome back! ${ALL_ELEMENTS.size} unique elements discovered.`, false);
         }
 
         initializeGame();
